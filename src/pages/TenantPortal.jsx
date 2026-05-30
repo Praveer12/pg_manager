@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom';
+import storage, { STORAGE_KEYS } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
 import TenantDashboard from '../components/tenant/TenantDashboard';
 import BrowsePGs from '../components/tenant/BrowsePGs';
@@ -15,6 +16,15 @@ export default function TenantPortal() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [noticesBadge, setNoticesBadge] = useState(0);
+
+  useEffect(() => {
+    const fetchBadges = async () => {
+      const notices = await storage.getAll(STORAGE_KEYS.NOTICES);
+      setNoticesBadge(notices.length);
+    };
+    fetchBadges();
+  }, [user]);
 
   const navItems = [
     { to: '/tenant', icon: '🏠', label: 'Dashboard', end: true },
@@ -22,7 +32,7 @@ export default function TenantPortal() {
     { to: '/tenant/my-stay', icon: '🛏️', label: 'My Stay' },
     { to: '/tenant/payments', icon: '💳', label: 'Payments' },
     { to: '/tenant/maintenance', icon: '🔧', label: 'Maintenance' },
-    { to: '/tenant/notices', icon: '📢', label: 'Notices', badge: 2 },
+    { to: '/tenant/notices', icon: '📢', label: 'Notices', badge: noticesBadge > 0 ? noticesBadge : null },
     { to: '/tenant/profile', icon: '👤', label: 'Profile' },
   ];
 
@@ -79,8 +89,8 @@ export default function TenantPortal() {
             <span className="navbar-title">Tenant Portal</span>
           </div>
           <div className="navbar-right">
-            <button className="notification-btn">
-              🔔<span className="notif-dot"></span>
+            <button className="notification-btn" onClick={() => alert('No new notifications')}>
+              🔔
             </button>
             <div className="user-menu relative" onClick={() => setShowUserMenu(!showUserMenu)}>
               <div className="user-info">

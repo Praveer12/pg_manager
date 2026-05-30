@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useNavigate, Navigate } from 'react-router-dom';
+import storage, { STORAGE_KEYS } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
 import OwnerDashboard from '../components/owner/OwnerDashboard';
 import RoomManager from '../components/owner/RoomManager';
@@ -17,14 +18,30 @@ export default function OwnerPortal() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [paymentsBadge, setPaymentsBadge] = useState(0);
+  const [maintenanceBadge, setMaintenanceBadge] = useState(0);
+
+  useEffect(() => {
+    const fetchBadges = async () => {
+      if (!user) return;
+      const payments = await storage.getAll(STORAGE_KEYS.PAYMENTS);
+      const pending = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
+      setPaymentsBadge(pending.length);
+
+      const maintenance = await storage.getAll(STORAGE_KEYS.MAINTENANCE);
+      const active = maintenance.filter(m => m.status !== 'resolved');
+      setMaintenanceBadge(active.length);
+    };
+    fetchBadges();
+  }, [user]);
 
   const navItems = [
     { to: '/owner', icon: '📊', label: 'Dashboard', end: true },
     { to: '/owner/rooms', icon: '🚪', label: 'Rooms' },
     { to: '/owner/guests', icon: '👥', label: 'Guests' },
-    { to: '/owner/payments', icon: '💰', label: 'Payments', badge: 3 },
+    { to: '/owner/payments', icon: '💰', label: 'Payments', badge: paymentsBadge > 0 ? paymentsBadge : null },
     { to: '/owner/agreements', icon: '📋', label: 'Agreements' },
-    { to: '/owner/maintenance', icon: '🔧', label: 'Maintenance', badge: 2 },
+    { to: '/owner/maintenance', icon: '🔧', label: 'Maintenance', badge: maintenanceBadge > 0 ? maintenanceBadge : null },
     { to: '/owner/notices', icon: '📢', label: 'Notices' },
     { to: '/owner/reports', icon: '📈', label: 'Reports' },
   ];
@@ -92,9 +109,8 @@ export default function OwnerPortal() {
               <span className="search-icon">🔍</span>
               <input type="text" placeholder="Search rooms, guests..." />
             </div>
-            <button className="notification-btn">
+            <button className="notification-btn" onClick={() => alert('No new notifications')}>
               🔔
-              <span className="notif-dot"></span>
             </button>
             <div className="user-menu relative" onClick={() => setShowUserMenu(!showUserMenu)}>
               <div className="user-info">
