@@ -102,21 +102,28 @@ export default function OwnerDashboard() {
 
   // Revenue bar chart
   const monthlyData = [
-    { month: 'Jan', revenue: 42500 },
-    { month: 'Feb', revenue: 49000 },
-    { month: 'Mar', revenue: 54000 },
-    { month: 'Apr', revenue: 52500 },
+    { month: 'Jan', revenue: 0 },
+    { month: 'Feb', revenue: 0 },
+    { month: 'Mar', revenue: 0 },
+    { month: 'Apr', revenue: 0 },
     { month: 'May', revenue: monthlyRevenue },
   ];
-  const maxRevenue = Math.max(...monthlyData.map(d => d.revenue));
+  const maxRevenue = Math.max(...monthlyData.map(d => d.revenue), 1000);
 
-  // Activity feed
-  const recentActivities = [
-    { icon: '🟢', iconBg: 'var(--success-bg)', text: '<strong>Priya Sharma</strong> paid rent for May', time: '2 hours ago' },
-    { icon: '🔧', iconBg: 'var(--warning-bg)', text: 'New maintenance request from <strong>Room 101</strong>', time: '5 hours ago' },
-    { icon: '📋', iconBg: 'var(--info-bg)', text: 'Agreement for <strong>Rahul Mehra</strong> expiring in 20 days', time: '1 day ago' },
-    { icon: '🏠', iconBg: 'rgba(124,58,237,0.15)', text: '<strong>Room 203</strong> marked for maintenance', time: '2 days ago' },
-  ];
+  // Activity feed (Dynamic)
+  const recentActivities = [];
+  if (payments.length > 0) {
+    const p = payments[payments.length - 1];
+    recentActivities.push({ icon: '💰', iconBg: 'var(--success-bg)', text: `Payment of <strong>${formatCurrency(p.amount)}</strong> recorded`, time: 'Recently' });
+  }
+  if (maintenance.length > 0) {
+    const m = maintenance[maintenance.length - 1];
+    recentActivities.push({ icon: '🔧', iconBg: 'var(--warning-bg)', text: `Maintenance request: <strong>${m.title}</strong>`, time: 'Recently' });
+  }
+  if (guests.length > 0) {
+    const g = guests[guests.length - 1];
+    recentActivities.push({ icon: '👥', iconBg: 'var(--info-bg)', text: `New guest added: <strong>${g.name}</strong>`, time: 'Recently' });
+  }
 
   const handleExport = () => {
     const csvRows = [
@@ -234,7 +241,7 @@ export default function OwnerDashboard() {
         <div className="glass-card-static animate-in animate-in-4">
           <h4 style={{ marginBottom: 'var(--space-md)' }}>Recent Activity</h4>
           <div className="activity-feed">
-            {recentActivities.map((activity, i) => (
+            {recentActivities.length > 0 ? recentActivities.map((activity, i) => (
               <div key={i} className="activity-item">
                 <div className="activity-icon" style={{ background: activity.iconBg }}>
                   {activity.icon}
@@ -244,7 +251,9 @@ export default function OwnerDashboard() {
                   <div className="activity-time">{activity.time}</div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>No recent activity to show yet.</p>
+            )}
           </div>
         </div>
 
