@@ -16,7 +16,7 @@ export default function NoticeBoard() {
   const handlePost = async () => {
     if (!formData.title || !formData.content) return;
     await storage.add(STORAGE_KEYS.NOTICES, {
-      ...formData, propertyId: 'prop_001', ownerId: 'owner_001', pinned: false,
+      ...formData, pinned: false,
     });
     setShowModal(false);
     setFormData({ title: '', content: '', priority: 'normal' });

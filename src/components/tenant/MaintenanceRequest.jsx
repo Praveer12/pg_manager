@@ -36,7 +36,7 @@ export default function MaintenanceRequest() {
   const handleSubmit = async () => {
     if (!formData.title || !formData.description) return;
     await storage.add(STORAGE_KEYS.MAINTENANCE, {
-      ...formData, guestId: guest.id, roomId: guest.roomId, propertyId: 'prop_001',
+      ...formData, guestId: guest.id, roomId: guest.roomId,
       status: 'new', images: [], assignedTo: null,
     });
     setShowModal(false);

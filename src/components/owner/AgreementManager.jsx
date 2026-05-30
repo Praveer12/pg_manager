@@ -93,7 +93,7 @@ export default function AgreementManager() {
     await storage.add(STORAGE_KEYS.AGREEMENTS, {
       guestId: guest.id,
       roomId: guest.roomId,
-      propertyId: guest.propertyId || 'prop_001',
+      propertyId: guest.propertyId || null,
       type: createForm.type,
       startDate: startDate,
       endDate: endDate.toISOString().split('T')[0],

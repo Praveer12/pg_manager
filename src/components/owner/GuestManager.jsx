@@ -64,7 +64,7 @@ export default function GuestManager() {
     if (!formData.name || !formData.phone || !formData.roomId) return;
     
     const newGuest = await storage.add(STORAGE_KEYS.GUESTS, {
-      ...formData, propertyId: 'prop_001', status: 'active', checkoutDate: null,
+      ...formData, status: 'active', checkoutDate: null,
     });
 
     const room = rooms.find(r => r.id === formData.roomId);
@@ -80,7 +80,7 @@ export default function GuestManager() {
     const endDate = getAgreementEndDate(formData.joinDate, formData.agreementType, formData.customMonths);
 
     await storage.add(STORAGE_KEYS.AGREEMENTS, {
-      guestId: newGuest.id, roomId: formData.roomId, propertyId: 'prop_001',
+      guestId: newGuest.id, roomId: formData.roomId,
       type: formData.agreementType === 'Custom' ? 'Custom' : formData.agreementType,
       startDate: formData.joinDate,
       endDate: endDate,

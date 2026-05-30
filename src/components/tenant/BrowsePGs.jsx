@@ -40,7 +40,7 @@ export default function BrowsePGs() {
 
   const handleBooking = async () => {
     await storage.add(STORAGE_KEYS.BOOKING_REQUESTS, {
-      roomId: selectedRoom.id, propertyId: 'prop_001',
+      roomId: selectedRoom.id,
       message: bookingMessage, status: 'pending',
       moveInDate: new Date().toISOString().split('T')[0],
       stayType: 'Monthly',

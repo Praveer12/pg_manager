@@ -47,7 +47,7 @@ export default function PaymentTracker() {
     
     await storage.add(STORAGE_KEYS.PAYMENTS, {
       guestId: formData.guestId, roomId: guest?.roomId,
-      propertyId: 'prop_001', amount: Number(formData.amount),
+      amount: Number(formData.amount),
       month: formData.month, year: formData.year,
       dueDate: new Date().toISOString(), paidDate: new Date().toISOString(),
       method: formData.method, status: 'paid',

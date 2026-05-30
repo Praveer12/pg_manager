@@ -61,7 +61,7 @@ export default function RoomManager() {
     } else {
       await storage.add(STORAGE_KEYS.ROOMS, {
         ...formData, rent: Number(formData.rent), deposit: Number(formData.deposit || formData.rent * 2),
-        propertyId: 'prop_001', status: 'vacant', guestId: null,
+        status: 'vacant', guestId: null,
       });
     }
     setShowModal(false);

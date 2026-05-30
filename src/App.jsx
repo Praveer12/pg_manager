@@ -1,15 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { initializeMockData } from './data/mockData';
+
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import OwnerPortal from './pages/OwnerPortal';
 import TenantPortal from './pages/TenantPortal';
 
-// Initialize mock data on first load
-initializeMockData();
-
+// Mock data removed
 function ProtectedRoute({ children, role }) {
   const { user, loading } = useAuth();
   
