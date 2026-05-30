@@ -58,7 +58,7 @@ export default function BrowsePGs() {
       <div className="page-header">
         <div>
           <h2>Browse Available Rooms</h2>
-          <p className="subtitle">{vacantRooms.length} rooms available at {property?.name || 'Sunrise PG Residency'}</p>
+          <p className="subtitle">{vacantRooms.length} rooms available at {property?.name || 'our PG'}</p>
         </div>
       </div>
 

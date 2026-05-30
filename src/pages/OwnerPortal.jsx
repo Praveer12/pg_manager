@@ -20,6 +20,7 @@ export default function OwnerPortal() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [paymentsBadge, setPaymentsBadge] = useState(0);
   const [maintenanceBadge, setMaintenanceBadge] = useState(0);
+  const [property, setProperty] = useState(null);
 
   useEffect(() => {
     const fetchBadges = async () => {
@@ -31,6 +32,9 @@ export default function OwnerPortal() {
       const maintenance = await storage.getAll(STORAGE_KEYS.MAINTENANCE);
       const active = maintenance.filter(m => m.status !== 'resolved');
       setMaintenanceBadge(active.length);
+
+      const properties = await storage.getAll(STORAGE_KEYS.PROPERTIES);
+      if (properties.length > 0) setProperty(properties[0]);
     };
     fetchBadges();
   }, [user]);
@@ -62,8 +66,8 @@ export default function OwnerPortal() {
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-logo">
-          <div className="logo-icon">🏠</div>
-          {!sidebarCollapsed && <span className="logo-text">PG Manager</span>}
+          <div className="logo-icon">🏢</div>
+          {!sidebarCollapsed && <span className="logo-text">{property?.name || 'PG Manager'}</span>}
         </div>
 
         <nav className="sidebar-nav">
