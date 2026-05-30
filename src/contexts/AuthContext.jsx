@@ -41,8 +41,11 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Email already registered.' };
     }
     
+    // Remove extra fields that don't belong in pgm_users table
+    const { occupation, company, pgName, pgCity, ...userDbData } = userData;
+
     const newUser = await storage.add(STORAGE_KEYS.USERS, {
-      ...userData,
+      ...userDbData,
       avatar: null,
     });
     
