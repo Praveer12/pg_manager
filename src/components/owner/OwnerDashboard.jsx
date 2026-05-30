@@ -29,7 +29,7 @@ export default function OwnerDashboard() {
   let fullyOccupied = 0;
   let completelyVacant = 0;
   let partiallyOccupied = 0;
-  let revenue = 0;
+
 
   rooms.forEach(r => {
     if (r.status === 'maintenance') return;
@@ -40,13 +40,12 @@ export default function OwnerDashboard() {
     else if (roomGuests.length >= capacity) fullyOccupied++;
     else partiallyOccupied++;
 
-    if (roomGuests.length > 0) revenue += r.rent; // Count rent if anyone is in it
   });
 
   const occupiedRooms = fullyOccupied;
   const vacantRooms = completelyVacant;
   const occupancyRate = totalRooms > 0 ? Math.round(((fullyOccupied + partiallyOccupied) / (totalRooms - maintenanceRooms)) * 100) : 0;
-  const monthlyRevenue = revenue;
+  const monthlyRevenue = agreements.filter(a => a.status === 'active').reduce((sum, a) => sum + (Number(a.rent) || 0), 0);
   const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
   const pendingAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
   const activeMaintenanceCount = maintenance.filter(m => m.status !== 'resolved').length;

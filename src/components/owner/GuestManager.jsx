@@ -21,6 +21,7 @@ export default function GuestManager() {
     idType: 'Aadhaar', idNumber: '', occupation: '', company: '',
     roomId: '', joinDate: new Date().toISOString().split('T')[0],
     agreementType: 'Monthly', customMonths: 3,
+    depositPaid: false, firstMonthRentPaid: false,
   });
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function GuestManager() {
   const handleAddGuest = async () => {
     if (!formData.name || !formData.phone || !formData.roomId) return;
     
-    const { agreementType, customMonths, checkoutDate, ...guestDbData } = formData;
+    const { agreementType, customMonths, checkoutDate, depositPaid, firstMonthRentPaid, ...guestDbData } = formData;
     const newGuest = await storage.add(STORAGE_KEYS.GUESTS, {
       ...guestDbData, status: 'active', leaveDate: null,
     });
@@ -86,12 +87,28 @@ export default function GuestManager() {
       startDate: formData.joinDate,
       endDate: endDate,
       rent: room?.rent || 0, deposit: room?.deposit || 0,
-      depositPaid: false, status: 'active',
+      depositPaid: formData.depositPaid, status: 'active',
       terms: `${formData.agreementType} agreement.`,
     });
 
+    // Create payment record for the first month rent
+    const joinDateObj = new Date(formData.joinDate);
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    await storage.add(STORAGE_KEYS.PAYMENTS, {
+      guestId: newGuest.id, roomId: formData.roomId,
+      amount: room?.rent || 0,
+      month: monthNames[joinDateObj.getMonth()],
+      year: joinDateObj.getFullYear(),
+      status: formData.firstMonthRentPaid ? 'paid' : 'pending',
+      dueDate: formData.joinDate,
+      paidDate: formData.firstMonthRentPaid ? new Date().toISOString().split('T')[0] : null,
+      method: formData.firstMonthRentPaid ? 'Cash/UPI' : null,
+      receiptNo: '',
+      notes: 'First month rent',
+    });
+
     setShowModal(false);
-    setFormData({ name: '', email: '', phone: '', emergencyContact: '', emergencyName: '', idType: 'Aadhaar', idNumber: '', occupation: '', company: '', roomId: '', joinDate: new Date().toISOString().split('T')[0], agreementType: 'Monthly', customMonths: 3 });
+    setFormData({ name: '', email: '', phone: '', emergencyContact: '', emergencyName: '', idType: 'Aadhaar', idNumber: '', occupation: '', company: '', roomId: '', joinDate: new Date().toISOString().split('T')[0], agreementType: 'Monthly', customMonths: 3, depositPaid: false, firstMonthRentPaid: false });
     await refreshData();
   };
 
@@ -345,6 +362,16 @@ export default function GuestManager() {
                     />
                   </div>
                 )}
+              </div>
+              <div className="form-row" style={{ marginTop: 'var(--space-md)' }}>
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                  <input type="checkbox" id="depositPaidCheck" checked={formData.depositPaid} onChange={(e) => setFormData(p => ({ ...p, depositPaid: e.target.checked }))} style={{ width: 'auto' }} />
+                  <label htmlFor="depositPaidCheck" className="form-label" style={{ marginBottom: 0 }}>Security Deposit Collected ✓</label>
+                </div>
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                  <input type="checkbox" id="firstRentCheck" checked={formData.firstMonthRentPaid} onChange={(e) => setFormData(p => ({ ...p, firstMonthRentPaid: e.target.checked }))} style={{ width: 'auto' }} />
+                  <label htmlFor="firstRentCheck" className="form-label" style={{ marginBottom: 0 }}>First Month Rent Collected ✓</label>
+                </div>
               </div>
             </div>
             <div className="modal-footer">

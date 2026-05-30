@@ -17,6 +17,7 @@ export default function AgreementManager() {
     guestId: '',
     type: 'Monthly',
     customMonths: 3,
+    depositPaid: false,
   });
 
   useEffect(() => {
@@ -99,13 +100,13 @@ export default function AgreementManager() {
       endDate: endDate.toISOString().split('T')[0],
       rent: room?.rent || 0,
       deposit: room?.deposit || 0,
-      depositPaid: false,
+      depositPaid: createForm.depositPaid,
       status: 'active',
       terms: `${createForm.type} agreement.`,
     });
 
     setShowCreateModal(false);
-    setCreateForm({ guestId: '', type: 'Monthly', customMonths: 3 });
+    setCreateForm({ guestId: '', type: 'Monthly', customMonths: 3, depositPaid: false });
     await refreshData();
   };
 
@@ -320,6 +321,11 @@ export default function AgreementManager() {
                   })()}
                 </div>
               )}
+              
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginTop: 'var(--space-md)' }}>
+                <input type="checkbox" id="depositPaidCheckAgr" checked={createForm.depositPaid} onChange={(e) => setCreateForm(p => ({ ...p, depositPaid: e.target.checked }))} style={{ width: 'auto' }} />
+                <label htmlFor="depositPaidCheckAgr" className="form-label" style={{ marginBottom: 0 }}>Security Deposit Collected ✓</label>
+              </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
