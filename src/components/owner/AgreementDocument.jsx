@@ -1,7 +1,9 @@
 import { useRef } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 export default function AgreementDocument({ agreement, guest, room, property, onClose }) {
+  const { user } = useAuth();
   const printRef = useRef(null);
 
   const handleDownloadPDF = () => {
@@ -211,19 +213,19 @@ export default function AgreementDocument({ agreement, guest, room, property, on
               <div className="details-grid">
                 <div className="detail-row">
                   <span className="detail-label">Owner Name:</span>
-                  <span className="detail-value">Rajesh Kumar</span>
+                  <span className="detail-value">{user?.name || 'Landlord'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Property:</span>
-                  <span className="detail-value">{property?.name || 'Sunrise PG Residency'}</span>
+                  <span className="detail-value">{property?.name || 'PG Accommodation'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Address:</span>
-                  <span className="detail-value">{property?.address || '42, MG Road, Koramangala, Bangalore - 560034'}</span>
+                  <span className="detail-value">{property?.address || '—'}</span>
                 </div>
                 <div className="detail-row">
                   <span className="detail-label">Contact:</span>
-                  <span className="detail-value">+91 98765 43210</span>
+                  <span className="detail-value">{user?.phone ? `+91 ${user.phone}` : '—'}</span>
                 </div>
               </div>
             </div>
@@ -328,7 +330,7 @@ export default function AgreementDocument({ agreement, guest, room, property, on
             <div className="signature-section">
               <div className="signature-block">
                 <div className="signature-line">Landlord / PG Owner</div>
-                <div className="signature-name">Rajesh Kumar</div>
+                <div className="signature-name">{user?.name || 'Landlord'}</div>
               </div>
               <div className="signature-block">
                 <div className="signature-line">Tenant / Guest</div>
