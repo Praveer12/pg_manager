@@ -54,14 +54,16 @@ export default function RoomManager() {
   const handleSave = async () => {
     if (!formData.number || !formData.rent) return;
 
+    const { description, guestId, ...roomDbData } = formData;
+
     if (editingRoom) {
       await storage.update(STORAGE_KEYS.ROOMS, editingRoom.id, {
-        ...formData, rent: Number(formData.rent), deposit: Number(formData.deposit || formData.rent * 2),
+        ...roomDbData, rent: Number(formData.rent), deposit: Number(formData.deposit || formData.rent * 2),
       });
     } else {
       await storage.add(STORAGE_KEYS.ROOMS, {
-        ...formData, rent: Number(formData.rent), deposit: Number(formData.deposit || formData.rent * 2),
-        status: 'vacant', guestId: null,
+        ...roomDbData, rent: Number(formData.rent), deposit: Number(formData.deposit || formData.rent * 2),
+        status: 'vacant',
       });
     }
     setShowModal(false);

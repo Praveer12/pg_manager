@@ -63,8 +63,9 @@ export default function GuestManager() {
   const handleAddGuest = async () => {
     if (!formData.name || !formData.phone || !formData.roomId) return;
     
+    const { agreementType, customMonths, checkoutDate, ...guestDbData } = formData;
     const newGuest = await storage.add(STORAGE_KEYS.GUESTS, {
-      ...formData, status: 'active', checkoutDate: null,
+      ...guestDbData, status: 'active', leaveDate: null,
     });
 
     const room = rooms.find(r => r.id === formData.roomId);
@@ -86,7 +87,6 @@ export default function GuestManager() {
       endDate: endDate,
       rent: room?.rent || 0, deposit: room?.deposit || 0,
       depositPaid: false, status: 'active',
-      terms: `${formData.agreementType} agreement.`,
     });
 
     setShowModal(false);
