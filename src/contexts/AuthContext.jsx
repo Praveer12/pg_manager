@@ -46,6 +46,10 @@ export function AuthProvider({ children }) {
       avatar: null,
     });
     
+    if (!newUser) {
+      return { success: false, error: 'Failed to create user. Please check database logs.' };
+    }
+    
     const sessionData = { ...newUser };
     delete sessionData.password;
     setUser(sessionData);
