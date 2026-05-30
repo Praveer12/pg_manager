@@ -41,22 +41,26 @@ export default function RegisterPage() {
     setStep(s => s + 1);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = register({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      password: formData.password,
-      role: role,
-      occupation: formData.occupation,
-      company: formData.company,
-    });
+    try {
+      const result = await register({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: role,
+        occupation: formData.occupation,
+        company: formData.company,
+      });
 
-    if (result.success) {
-      navigate(role === 'owner' ? '/owner' : '/tenant');
-    } else {
-      setError(result.error);
+      if (result.success) {
+        navigate(role === 'owner' ? '/owner' : '/tenant');
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('An error occurred during registration.');
     }
   };
 

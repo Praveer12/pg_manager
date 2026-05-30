@@ -11,20 +11,23 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     
-    setTimeout(() => {
-      const result = login(email, password, role);
+    try {
+      const result = await login(email, password, role);
       if (result.success) {
         navigate(role === 'owner' ? '/owner' : '/tenant');
       } else {
         setError(result.error);
       }
+    } catch (err) {
+      setError('An error occurred during sign in.');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   const fillDemo = (demoRole) => {
