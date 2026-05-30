@@ -76,7 +76,7 @@ export default function Reports() {
       </div>
 
       {/* Key Metrics */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="stats-grid grid-4">
         {[
           { label: 'Total Revenue', value: formatCurrency(totalRevenue), icon: '💰', color: 'green', change: '↑ 12%' },
           { label: 'Occupancy Rate', value: `${occupancyRate}%`, icon: '🏠', color: 'purple', change: `${occupiedRooms}/${totalRooms} rooms` },

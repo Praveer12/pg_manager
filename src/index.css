@@ -1384,6 +1384,12 @@ h6 { font-size: 0.875rem; }
   gap: var(--space-md);
 }
 
+.grid-auto-sm {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-md);
+}
+
 /* ---- Room Card ---- */
 .room-card {
   background: var(--bg-card);

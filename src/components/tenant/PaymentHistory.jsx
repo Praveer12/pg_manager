@@ -42,7 +42,7 @@ export default function PaymentHistory() {
         </div>
       </div>
 
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+      <div className="stats-grid grid-2">
         <div className="stat-card green animate-in animate-in-1">
           <div className="stat-info">
             <h4>Total Paid</h4>

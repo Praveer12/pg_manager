@@ -55,7 +55,7 @@ export default function TenantDashboard() {
       </div>
 
       {/* Top Cards */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+      <div className="stats-grid grid-3">
         <div className="stat-card purple animate-in animate-in-1">
           <div className="stat-info">
             <h4>My Room</h4>

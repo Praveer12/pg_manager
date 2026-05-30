@@ -64,7 +64,7 @@ export default function MyStay() {
                 <h3>Room {room.number}</h3>
                 <span className="badge badge-purple" style={{ marginTop: '6px' }}>{room.type}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)' }}>
+              <div className="grid-2" style={{ gap: 'var(--space-sm)' }}>
                 {[
                   ['Floor', `Floor ${room.floor}`],
                   ['Rent', formatCurrency(room.rent)],

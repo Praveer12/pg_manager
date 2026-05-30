@@ -189,7 +189,7 @@ export default function OwnerDashboard() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid-2 mb-xl" style={{ gridTemplateColumns: '1fr 2fr' }}>
+      <div className="grid-2 mb-xl">
         {/* Occupancy Donut */}
         <div className="chart-container animate-in animate-in-2">
           <div className="chart-header">
@@ -318,7 +318,7 @@ export default function OwnerDashboard() {
           <h4>Room Overview</h4>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{totalRooms} rooms total</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 'var(--space-sm)' }}>
+        <div className="grid-auto-sm" style={{ gap: 'var(--space-sm)' }}>
           {rooms.map((room) => {
             const roomGuests = guests.filter(g => g.roomId === room.id && g.status === 'active');
             const capacity = room.type === 'Single' ? 1 : room.type === 'Double' ? 2 : room.type === 'Triple' ? 3 : 1;

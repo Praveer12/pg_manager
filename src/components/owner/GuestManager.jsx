@@ -441,7 +441,7 @@ export default function GuestManager() {
                         📄 View Full Agreement
                       </button>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-sm)', fontSize: '0.8rem' }}>
+                    <div className="grid-3" style={{ gap: 'var(--space-sm)', fontSize: '0.8rem' }}>
                       <div><span style={{ color: 'var(--text-muted)' }}>Type:</span> {agr.type}</div>
                       <div><span style={{ color: 'var(--text-muted)' }}>Start:</span> {formatDate(agr.startDate)}</div>
                       <div><span style={{ color: 'var(--text-muted)' }}>End:</span> {formatDate(agr.endDate)}</div>

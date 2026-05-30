@@ -179,7 +179,7 @@ export default function AgreementManager() {
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
+              <div className="grid-2" style={{ gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
                 <div style={{ background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-sm)' }}>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Start Date</div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{formatDate(agr.startDate)}</div>

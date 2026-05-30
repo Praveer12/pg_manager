@@ -83,7 +83,7 @@ export default function PaymentTracker() {
       </div>
 
       {/* Stats */}
-      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+      <div className="stats-grid grid-3">
         <div className="stat-card green animate-in animate-in-1">
           <div className="stat-info">
             <h4>Collected</h4>
