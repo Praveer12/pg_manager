@@ -87,6 +87,7 @@ export default function GuestManager() {
       endDate: endDate,
       rent: room?.rent || 0, deposit: room?.deposit || 0,
       depositPaid: false, status: 'active',
+      terms: `${formData.agreementType} agreement.`,
     });
 
     setShowModal(false);

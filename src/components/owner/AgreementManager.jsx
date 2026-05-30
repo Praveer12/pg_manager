@@ -101,6 +101,7 @@ export default function AgreementManager() {
       deposit: room?.deposit || 0,
       depositPaid: false,
       status: 'active',
+      terms: `${createForm.type} agreement.`,
     });
 
     setShowCreateModal(false);

@@ -42,6 +42,7 @@ CREATE TABLE pgm_rooms (
   status TEXT DEFAULT 'vacant',
   amenities JSONB,
   images JSONB,
+  description TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
@@ -102,6 +103,7 @@ CREATE TABLE pgm_agreements (
   status TEXT DEFAULT 'active',
   type TEXT DEFAULT 'monthly',
   "documentUrl" TEXT,
+  terms TEXT,
   "createdAt" TIMESTAMPTZ DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );

@@ -54,7 +54,7 @@ export default function RoomManager() {
   const handleSave = async () => {
     if (!formData.number || !formData.rent) return;
 
-    const { description, guestId, ...roomDbData } = formData;
+    const { guestId, ...roomDbData } = formData;
 
     if (editingRoom) {
       await storage.update(STORAGE_KEYS.ROOMS, editingRoom.id, {
