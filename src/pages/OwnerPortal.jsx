@@ -113,22 +113,95 @@ export default function OwnerPortal() {
   const [paymentsBadge, setPaymentsBadge] = useState(0);
   const [maintenanceBadge, setMaintenanceBadge] = useState(0);
   const [property, setProperty] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
-    const fetchBadges = async () => {
+    const fetchNotifications = async () => {
       if (!user) return;
-      const payments = await storage.getAll(STORAGE_KEYS.PAYMENTS);
-      const pending = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
-      setPaymentsBadge(pending.length);
+      
+      const newNotifications = [];
 
-      const maintenance = await storage.getAll(STORAGE_KEYS.MAINTENANCE);
-      const active = maintenance.filter(m => m.status !== 'resolved');
-      setMaintenanceBadge(active.length);
+      // 1. Pending Booking Requests
+      try {
+        const bookings = await storage.getAll(STORAGE_KEYS.BOOKING_REQUESTS);
+        const pendingBookings = bookings.filter(b => b.status === 'pending');
+        pendingBookings.forEach(b => {
+          newNotifications.push({
+            id: `booking_${b.id}`,
+            type: 'booking',
+            title: '📋 New Booking Request',
+            message: `**${b.name}** wants to book a room. Move-in: ${b.moveInDate || 'Not specified'}.`,
+            time: b.createdAt,
+            path: '/owner/guests',
+            icon: '📋',
+          });
+        });
+      } catch (e) {
+        console.warn("Failed to fetch booking requests for notifications:", e);
+      }
 
-      const properties = await storage.getAll(STORAGE_KEYS.PROPERTIES);
-      if (properties.length > 0) setProperty(properties[0]);
+      // 2. Pending & Overdue Payments
+      try {
+        const payments = await storage.getAll(STORAGE_KEYS.PAYMENTS);
+        const guests = await storage.getAll(STORAGE_KEYS.GUESTS);
+        const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
+        pendingPayments.forEach(p => {
+          const guestName = guests.find(g => g.id === p.guestId)?.name || 'Guest';
+          newNotifications.push({
+            id: `payment_${p.id}`,
+            type: 'payment',
+            title: p.status === 'overdue' ? '⚠️ Payment Overdue' : '⏳ Payment Pending',
+            message: `Rent payment of **₹${p.amount.toLocaleString()}** for **${p.month}** is pending for **${guestName}**.`,
+            time: p.dueDate || p.createdAt,
+            path: '/owner/payments',
+            icon: p.status === 'overdue' ? '🔴' : '🟡',
+          });
+        });
+        setPaymentsBadge(pendingPayments.length);
+      } catch (e) {
+        console.warn("Failed to fetch payments for notifications:", e);
+      }
+
+      // 3. Active Maintenance Requests
+      try {
+        const maintenance = await storage.getAll(STORAGE_KEYS.MAINTENANCE);
+        const activeMaint = maintenance.filter(m => m.status === 'new');
+        activeMaint.forEach(m => {
+          newNotifications.push({
+            id: `maint_${m.id}`,
+            type: 'maintenance',
+            title: '🔧 New Maintenance Request',
+            message: `**${m.title}** (Priority: ${m.priority})`,
+            time: m.createdAt,
+            path: '/owner/maintenance',
+            icon: '🔧',
+          });
+        });
+        
+        const activeCount = maintenance.filter(m => m.status !== 'resolved').length;
+        setMaintenanceBadge(activeCount);
+      } catch (e) {
+        console.warn("Failed to fetch maintenance requests for notifications:", e);
+      }
+
+      // 4. Load Property details
+      try {
+        const properties = await storage.getAll(STORAGE_KEYS.PROPERTIES);
+        const ownerProp = properties.find(p => p.ownerId === user.id) || properties[0];
+        if (ownerProp) setProperty(ownerProp);
+      } catch (e) {
+        console.warn("Failed to fetch property for OwnerPortal:", e);
+      }
+
+      // Sort notifications by time (latest first)
+      newNotifications.sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0));
+      setNotifications(newNotifications);
     };
-    fetchBadges();
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 15000); // refresh every 15s for live updates
+    return () => clearInterval(interval);
   }, [user]);
 
   // Bottom tab items (primary 5)
@@ -230,10 +303,125 @@ export default function OwnerPortal() {
               <span className="search-icon">{Icons.search()}</span>
               <input type="text" placeholder="Search rooms, guests..." />
             </div>
-            <button className="notification-btn" onClick={() => alert('No new notifications')}>
-              {Icons.bell()}
-            </button>
-            <div className="user-menu relative" onClick={() => setShowUserMenu(!showUserMenu)}>
+            <div className="relative" style={{ display: 'flex', alignItems: 'center' }}>
+              <button 
+                className="notification-btn" 
+                onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false); }}
+                style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                {Icons.bell()}
+                {notifications.length > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-2px',
+                    background: 'var(--danger)',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    minWidth: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '2px solid var(--bg-primary)',
+                    padding: '0 3px',
+                  }}>
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+              
+              {showNotifications && (
+                <div className="dropdown-menu notifications-dropdown" style={{ 
+                  position: 'absolute',
+                  top: '100%', 
+                  right: 0, 
+                  marginTop: '8px', 
+                  width: '320px', 
+                  padding: 0,
+                  zIndex: 1000,
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+                  border: '1px solid var(--border-color)',
+                  maxHeight: '400px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}>
+                  <div className="notifications-header" style={{ 
+                    padding: 'var(--space-md)', 
+                    borderBottom: '1px solid var(--border-color)', 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    background: 'var(--bg-secondary)',
+                    borderTopLeftRadius: 'var(--radius-md)',
+                    borderTopRightRadius: 'var(--radius-md)',
+                  }}>
+                    <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>Notifications</h4>
+                    {notifications.length > 0 && (
+                      <span className="badge badge-purple" style={{ fontSize: '0.7rem' }}>{notifications.length} New</span>
+                    )}
+                  </div>
+                  
+                  <div className="notifications-list scrollbar-custom" style={{ 
+                    overflowY: 'auto',
+                    flex: 1,
+                    background: 'var(--bg-card)',
+                    borderBottomLeftRadius: 'var(--radius-md)',
+                    borderBottomRightRadius: 'var(--radius-md)',
+                  }}>
+                    {notifications.length > 0 ? (
+                      notifications.map((n) => (
+                        <div 
+                          key={n.id} 
+                          className="notification-item" 
+                          onClick={() => { 
+                            setShowNotifications(false); 
+                            navigate(n.path); 
+                          }}
+                          style={{ 
+                            padding: 'var(--space-md)', 
+                            borderBottom: '1px solid var(--border-color)', 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            gap: 'var(--space-md)',
+                            transition: 'background var(--transition-fast)',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <div className="notification-icon" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {n.icon}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{n.title}</div>
+                            <div 
+                              style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: '1.4' }}
+                              dangerouslySetInnerHTML={{ 
+                                __html: n.message
+                                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                  .replace(/\*(.*?)\*/g, '<em>$1</em>') 
+                              }}
+                            />
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                              {new Date(n.time).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at {new Date(n.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: 'var(--space-xl)', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '2rem', marginBottom: 'var(--space-sm)' }}>🎉</div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>All caught up!</div>
+                        <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>No new alerts or pending tasks.</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="user-menu relative" onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false); }}>
               <div className="user-info desktop-only">
                 <div className="user-name">{user?.name || 'Owner'}</div>
                 <div className="user-role">PG Owner</div>
