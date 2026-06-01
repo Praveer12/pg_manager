@@ -36,42 +36,47 @@ export default function Profile() {
         }
       }
     };
-    fetchProperty();
-  }, [user]);
+    if (user?.id) {
+      fetchProperty();
+    }
+  }, [user?.id]);
 
   const handleSave = async () => {
+    // Capture form values locally first to prevent race condition state resets
+    const { name, email, phone, pgName, pgCity, pgAddress, occupation, company } = formData;
+
     // Update User Profile
     await updateProfile({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      occupation: user?.role === 'tenant' ? formData.occupation : '',
-      company: user?.role === 'tenant' ? formData.company : '',
+      name,
+      email,
+      phone,
+      occupation: user?.role === 'tenant' ? occupation : '',
+      company: user?.role === 'tenant' ? company : '',
     });
 
     // Update Property if user is Owner
     if (user?.role === 'owner') {
       if (property) {
         const updatedProp = await storage.update(STORAGE_KEYS.PROPERTIES, property.id, {
-          name: formData.pgName,
-          city: formData.pgCity,
-          address: formData.pgAddress,
+          name: pgName,
+          city: pgCity,
+          address: pgAddress,
         });
         if (updatedProp) setProperty(updatedProp);
       } else {
         // Create new property if none exists
         const defaultProp = {
           ownerId: user.id,
-          name: formData.pgName,
-          city: formData.pgCity,
-          address: formData.pgAddress,
+          name: pgName,
+          city: pgCity,
+          address: pgAddress,
           totalRooms: 12,
           amenities: ['wifi', 'ac', 'parking', 'laundry', 'kitchen', 'security', 'cctv'],
           rules: ['No smoking inside rooms', 'Visitor hours: 9 AM - 9 PM'],
           rating: 4.5,
           images: [],
           paymentDetails: {
-            upiPhone: formData.phone,
+            upiPhone: phone,
             upiId: '',
             qrImage: null,
           }
