@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import storage, { STORAGE_KEYS } from '../../utils/storage';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function OwnerSettings() {
   const [property, setProperty] = useState(null);
@@ -10,6 +11,7 @@ export default function OwnerSettings() {
   });
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchProps = async () => {
@@ -42,18 +44,51 @@ export default function OwnerSettings() {
   };
 
   const handleSave = async () => {
-    if (!property) return;
+    setSaved(false);
     
-    await storage.update(STORAGE_KEYS.PROPERTIES, property.id, {
-      paymentDetails: {
-        upiPhone: formData.upiPhone,
-        upiId: formData.upiId,
-        qrImage: formData.qrImage,
+    const paymentDetails = {
+      upiPhone: formData.upiPhone,
+      upiId: formData.upiId,
+      qrImage: formData.qrImage,
+    };
+
+    if (!property) {
+      // Create a default property if none exists (e.g. newly registered or empty DB)
+      const defaultProp = {
+        ownerId: user?.id || 'owner_001',
+        name: user?.name ? `${user.name}'s PG Residency` : 'Sunrise PG Residency',
+        address: '42, MG Road, Koramangala, Bangalore',
+        totalRooms: 12,
+        amenities: ['wifi', 'ac', 'parking', 'laundry', 'kitchen', 'security', 'cctv'],
+        rules: ['No smoking inside rooms', 'Visitor hours: 9 AM - 9 PM'],
+        rating: 4.5,
+        images: [],
+        paymentDetails: paymentDetails,
+      };
+
+      const created = await storage.add(STORAGE_KEYS.PROPERTIES, defaultProp);
+      if (created) {
+        setProperty(created);
+        setSaved(true);
+        // Log Activity
+        await storage.logActivity('⚙️', 'system', 'Payment settings initialized and QR Code updated');
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        console.error("Failed to create property in settings saving.");
       }
-    });
-    
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    } else {
+      // Update existing property
+      const updated = await storage.update(STORAGE_KEYS.PROPERTIES, property.id, {
+        paymentDetails: paymentDetails,
+      });
+      if (updated) {
+        setProperty(updated);
+        setSaved(true);
+        // Log Activity
+        await storage.logActivity('⚙️', 'system', 'Payment settings and QR Code updated');
+        setTimeout(() => setSaved(false), 2000);
+      }
+    }
   };
 
   return (
