@@ -53,6 +53,26 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Failed to create user. Please check database logs.' };
     }
     
+    // Create corresponding property if the user is an owner
+    if (newUser.role === 'owner') {
+      await storage.add(STORAGE_KEYS.PROPERTIES, {
+        ownerId: newUser.id,
+        name: pgName || `${newUser.name}'s PG Residency`,
+        city: pgCity || 'Bangalore',
+        address: pgCity ? `Koramangala, ${pgCity}` : '42, MG Road, Koramangala, Bangalore',
+        totalRooms: 12,
+        amenities: ['wifi', 'ac', 'parking', 'laundry', 'kitchen', 'security', 'cctv'],
+        rules: ['No smoking inside rooms', 'Visitor hours: 9 AM - 9 PM'],
+        rating: 4.5,
+        images: [],
+        paymentDetails: {
+          upiPhone: newUser.phone || '',
+          upiId: '',
+          qrImage: null,
+        }
+      });
+    }
+    
     const sessionData = { ...newUser };
     delete sessionData.password;
     setUser(sessionData);

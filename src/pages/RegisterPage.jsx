@@ -50,8 +50,10 @@ export default function RegisterPage() {
         phone: formData.phone,
         password: formData.password,
         role: role,
-        occupation: formData.occupation,
-        company: formData.company,
+        occupation: role === 'tenant' ? formData.occupation : '',
+        company: role === 'tenant' ? formData.company : '',
+        pgName: role === 'owner' ? formData.pgName : '',
+        pgCity: role === 'owner' ? formData.pgCity : '',
       });
 
       if (result.success) {
