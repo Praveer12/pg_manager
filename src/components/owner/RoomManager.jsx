@@ -60,11 +60,13 @@ export default function RoomManager() {
       await storage.update(STORAGE_KEYS.ROOMS, editingRoom.id, {
         ...roomDbData, rent: Number(formData.rent), deposit: Number(formData.deposit || formData.rent * 2),
       });
+      await storage.logActivity('🚪', 'room_edit', `Room **${formData.number}** details updated`, `Type: ${formData.type} | Rent: ₹${formData.rent}`);
     } else {
       await storage.add(STORAGE_KEYS.ROOMS, {
         ...roomDbData, rent: Number(formData.rent), deposit: Number(formData.deposit || formData.rent * 2),
         status: 'vacant',
       });
+      await storage.logActivity('🚪', 'room_add', `New Room **${formData.number}** (${formData.type}) added`, `Rent: ₹${formData.rent} | Deposit: ₹${formData.deposit || formData.rent * 2}`);
     }
     setShowModal(false);
     await refreshData();
@@ -78,6 +80,10 @@ export default function RoomManager() {
     }
     const newStatus = room.status === 'maintenance' ? 'vacant' : 'maintenance';
     await storage.update(STORAGE_KEYS.ROOMS, room.id, { status: newStatus });
+    
+    const statusLabels = { vacant: 'Vacant', maintenance: 'Under Maintenance' };
+    await storage.logActivity('🔧', 'room_status', `Room **${room.number}** status set to **${statusLabels[newStatus]}**`);
+    
     await refreshData();
   };
 
@@ -192,19 +198,73 @@ export default function RoomManager() {
                   <div className="room-type">{room.type}</div>
                 </div>
                 <div className="room-card-body">
-                  <h4>Room {room.number}</h4>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 'var(--space-sm)' }}>
-                    Floor {room.floor}
-                    {roomGuests.length > 0 && <> • <span style={{ color: 'var(--text-secondary)' }}>{roomGuests.map(g => g.name).join(', ')}</span></>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <h4 style={{ margin: 0 }}>Room {room.number}</h4>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Floor {room.floor}</span>
                   </div>
-                  <div className="room-price">
+
+                  {/* Bed Occupancy Icons Visualization */}
+                  <div style={{
+                    marginTop: 'var(--space-md)',
+                    marginBottom: 'var(--space-md)',
+                    padding: 'var(--space-sm) var(--space-md)',
+                    background: 'var(--bg-secondary)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)',
+                  }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Beds & Occupants
+                    </div>
+                    <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'space-around', alignItems: 'flex-start' }}>
+                      {Array.from({ length: capacity }).map((_, idx) => {
+                        const occupant = roomGuests[idx];
+                        const isOccupied = !!occupant;
+                        const bedColor = isOccupied ? '#ef4444' : '#10b981'; // vibrant red and green
+                        const bgLight = isOccupied ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+                        return (
+                          <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '38px',
+                              height: '38px',
+                              borderRadius: 'var(--radius-md)',
+                              background: bgLight,
+                              marginBottom: '6px',
+                              border: `1px solid ${isOccupied ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
+                              transition: 'transform 0.2s',
+                            }}>
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill={bedColor} style={{ display: 'block' }}>
+                                <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z" />
+                              </svg>
+                            </div>
+                            <span style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              color: isOccupied ? 'var(--text-primary)' : 'var(--text-muted)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              width: '100%',
+                              padding: '0 2px',
+                            }} title={occupant ? occupant.name : 'Vacant'}>
+                              {occupant ? occupant.name.split(' ')[0] : 'Vacant'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="room-price" style={{ marginTop: 'var(--space-sm)' }}>
                     {formatCurrency(room.rent)} <span>/month</span>
                   </div>
-                  <div className="room-amenities">
-                    {(room.amenities || []).slice(0, 4).map((a, i) => (
+                  <div className="room-amenities" style={{ marginTop: 'var(--space-sm)' }}>
+                    {(room.amenities || []).slice(0, 3).map((a, i) => (
                       <span key={i} className="amenity-chip">{AMENITY_ICONS[a] || '•'} {a.replace('_', ' ')}</span>
                     ))}
-                    {(room.amenities?.length || 0) > 4 && <span className="amenity-chip">+{room.amenities.length - 4}</span>}
+                    {(room.amenities?.length || 0) > 3 && <span className="amenity-chip">+{room.amenities.length - 3}</span>}
                   </div>
                 </div>
                 <div className="room-card-footer">
@@ -256,7 +316,25 @@ export default function RoomManager() {
                     <td>Floor {room.floor}</td>
                     <td className="cell-primary">{formatCurrency(room.rent)}</td>
                     <td><span className={`badge badge-${sc?.color}`}>{sc?.label}</span></td>
-                    <td>{roomGuests.length > 0 ? roomGuests.map(g => g.name).join(', ') : '—'}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          {Array.from({ length: capacity }).map((_, idx) => {
+                            const occupant = roomGuests[idx];
+                            const isOccupied = !!occupant;
+                            const bedColor = isOccupied ? '#ef4444' : '#10b981';
+                            return (
+                              <svg key={idx} width="16" height="16" viewBox="0 0 24 24" fill={bedColor} title={occupant ? occupant.name : 'Vacant'}>
+                                <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z" />
+                              </svg>
+                            );
+                          })}
+                        </div>
+                        <span style={{ fontSize: '0.85rem' }}>
+                          {roomGuests.length > 0 ? roomGuests.map(g => g.name.split(' ')[0]).join(', ') : '—'}
+                        </span>
+                      </div>
+                    </td>
                     <td>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => openEditModal(room)}>✏️</button>

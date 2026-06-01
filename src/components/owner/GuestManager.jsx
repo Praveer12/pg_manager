@@ -107,6 +107,13 @@ export default function GuestManager() {
       notes: 'First month rent',
     });
 
+    await storage.logActivity(
+      '👥',
+      'guest_checkin',
+      `New guest **${newGuest.name}** checked in to **Room ${room?.number || ''}**`,
+      `Agreement: ${formData.agreementType} | Rent: ₹${room?.rent || 0}`
+    );
+
     setShowModal(false);
     setFormData({ name: '', email: '', phone: '', emergencyContact: '', emergencyName: '', idType: 'Aadhaar', idNumber: '', occupation: '', company: '', roomId: '', joinDate: new Date().toISOString().split('T')[0], agreementType: 'Monthly', customMonths: 3, depositPaid: false, firstMonthRentPaid: false });
     await refreshData();
@@ -129,6 +136,14 @@ export default function GuestManager() {
       });
     }
 
+    const oldRoom = rooms.find(r => r.id === selectedGuest.roomId);
+    await storage.logActivity(
+      '🔀',
+      'guest_reallocate',
+      `Guest **${selectedGuest.name}** reallocated from Room **${oldRoom?.number || ''}** to **Room ${newRoom?.number || ''}**`,
+      `New Rent: ₹${newRoom?.rent || 0}`
+    );
+
     setShowReallocateModal(false);
     setSelectedGuest(null);
     setReallocateRoomId('');
@@ -137,8 +152,18 @@ export default function GuestManager() {
 
   const handleCheckout = async (guest) => {
     if (!confirm(`Check out ${guest.name}?`)) return;
+    
+    const room = rooms.find(r => r.id === guest.roomId);
     await storage.update(STORAGE_KEYS.GUESTS, guest.id, { status: 'checked_out', checkoutDate: new Date().toISOString() });
     await storage.update(STORAGE_KEYS.ROOMS, guest.roomId, { status: 'vacant' });
+    
+    await storage.logActivity(
+      '🚪',
+      'guest_checkout',
+      `Guest **${guest.name}** checked out from **Room ${room?.number || ''}**`,
+      `Checkout Date: ${new Date().toLocaleDateString()}`
+    );
+    
     await refreshData();
     setShowDetailModal(false);
   };

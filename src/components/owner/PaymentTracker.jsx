@@ -13,7 +13,7 @@ export default function PaymentTracker() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [formData, setFormData] = useState({
-    guestId: '', amount: '', month: '', year: 2025, method: 'UPI', notes: '',
+    guestId: '', amount: '', month: '', year: new Date().getFullYear(), method: 'UPI', notes: '',
   });
 
   useEffect(() => {
@@ -45,17 +45,24 @@ export default function PaymentTracker() {
     if (!formData.guestId || !formData.amount) return;
     const guest = guests.find(g => g.id === formData.guestId);
     
-    await storage.add(STORAGE_KEYS.PAYMENTS, {
+    const newPayment = await storage.add(STORAGE_KEYS.PAYMENTS, {
       guestId: formData.guestId, roomId: guest?.roomId,
       amount: Number(formData.amount),
-      month: formData.month, year: formData.year,
+      month: formData.month, year: Number(formData.year),
       dueDate: new Date().toISOString(), paidDate: new Date().toISOString(),
       method: formData.method, status: 'paid',
       receiptNo: generateReceiptNumber(), notes: formData.notes,
     });
 
+    await storage.logActivity(
+      '💰',
+      'payment',
+      `Payment of **₹${formData.amount}** recorded for **${guest?.name || ''}**`,
+      `Month: ${formData.month} ${formData.year} | Method: ${formData.method}`
+    );
+
     setShowModal(false);
-    setFormData({ guestId: '', amount: '', month: '', year: 2025, method: 'UPI', notes: '' });
+    setFormData({ guestId: '', amount: '', month: '', year: new Date().getFullYear(), method: 'UPI', notes: '' });
     await refreshData();
   };
 
@@ -64,6 +71,15 @@ export default function PaymentTracker() {
       status: 'paid', paidDate: new Date().toISOString(),
       method: 'Cash', receiptNo: generateReceiptNumber(),
     });
+    
+    const guest = guests.find(g => g.id === payment.guestId);
+    await storage.logActivity(
+      '💰',
+      'payment',
+      `Payment of **₹${payment.amount}** for **${guest?.name || ''}** marked as PAID`,
+      `Month: ${payment.month} ${payment.year} | Method: Cash`
+    );
+    
     await refreshData();
   };
 

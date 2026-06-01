@@ -21,29 +21,69 @@ export default function Reports() {
   }, []);
 
   const totalRooms = rooms.length;
-  const occupiedRooms = rooms.filter(r => r.status === 'occupied').length;
-  const vacantRooms = rooms.filter(r => r.status === 'vacant').length;
-  const occupancyRate = totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
+  const maintenanceRooms = rooms.filter(r => r.status === 'maintenance').length;
   
+  // Calculate occupancy from actual guest data, not room.status
+  let fullyOccupied = 0;
+  let partiallyOccupied = 0;
+  let vacantRooms = 0;
+  
+  rooms.forEach(r => {
+    if (r.status === 'maintenance') return;
+    const roomGuests = guests.filter(g => g.roomId === r.id && g.status === 'active');
+    const capacity = r.type === 'Single' ? 1 : r.type === 'Double' ? 2 : r.type === 'Triple' ? 3 : 1;
+    if (roomGuests.length === 0) vacantRooms++;
+    else if (roomGuests.length >= capacity) fullyOccupied++;
+    else partiallyOccupied++;
+  });
+  
+  const occupiedRooms = fullyOccupied + partiallyOccupied;
+  const availableRooms = totalRooms - maintenanceRooms;
+  const occupancyRate = availableRooms > 0 ? Math.round((occupiedRooms / availableRooms) * 100) : 0;
+  
+  // Revenue from actual paid payments
   const paidPayments = payments.filter(p => p.status === 'paid');
-  const totalRevenue = paidPayments.reduce((sum, p) => sum + p.amount, 0);
+  const totalRevenue = paidPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
-  const pendingAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
+  const pendingAmount = pendingPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
   const collectionRate = payments.length > 0 ? Math.round((paidPayments.length / payments.length) * 100) : 0;
 
-  // Revenue by room type
+  // Revenue by room type — from agreements of rooms with active guests
   const revenueByType = {};
-  rooms.filter(r => r.status === 'occupied').forEach(r => {
-    revenueByType[r.type] = (revenueByType[r.type] || 0) + r.rent;
+  rooms.forEach(r => {
+    const roomGuests = guests.filter(g => g.roomId === r.id && g.status === 'active');
+    if (roomGuests.length > 0) {
+      const agr = agreements.find(a => a.roomId === r.id && a.status === 'active');
+      const rent = agr ? Number(agr.rent) : r.rent;
+      revenueByType[r.type] = (revenueByType[r.type] || 0) + rent;
+    }
   });
 
-  // Monthly revenue trend data
-  const monthlyRevenue = [
-    { month: 'Jan', value: 42500 }, { month: 'Feb', value: 49000 },
-    { month: 'Mar', value: 54000 }, { month: 'Apr', value: 52500 },
-    { month: 'May', value: rooms.filter(r => r.status === 'occupied').reduce((s, r) => s + r.rent, 0) },
-  ];
-  const maxMonthly = Math.max(...monthlyRevenue.map(d => d.value));
+  // Monthly revenue trend — from actual paid payments grouped by month
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const fullMonthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const now = new Date();
+  const currentMonthIndex = now.getMonth();
+  
+  const monthlyRevenue = [];
+  for (let i = 4; i >= 0; i--) {
+    const targetDate = new Date(now.getFullYear(), currentMonthIndex - i, 1);
+    const mName = monthNames[targetDate.getMonth()];
+    const mYear = targetDate.getFullYear();
+    const monthPayments = paidPayments.filter(p => {
+      if (p.month && p.year) {
+        const idx = fullMonthNames.indexOf(p.month);
+        return idx === targetDate.getMonth() && Number(p.year) === mYear;
+      }
+      if (p.paidDate) {
+        const pd = new Date(p.paidDate);
+        return pd.getMonth() === targetDate.getMonth() && pd.getFullYear() === mYear;
+      }
+      return false;
+    });
+    monthlyRevenue.push({ month: mName, value: monthPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) });
+  }
+  const maxMonthly = Math.max(...monthlyRevenue.map(d => d.value), 1000);
 
   const maintenanceStats = {
     total: maintenance.length,
@@ -78,7 +118,7 @@ export default function Reports() {
       {/* Key Metrics */}
       <div className="stats-grid grid-4">
         {[
-          { label: 'Total Revenue', value: formatCurrency(totalRevenue), icon: '💰', color: 'green', change: '↑ 12%' },
+          { label: 'Total Revenue', value: formatCurrency(totalRevenue), icon: '💰', color: 'green', change: `${paidPayments.length} payments collected` },
           { label: 'Occupancy Rate', value: `${occupancyRate}%`, icon: '🏠', color: 'purple', change: `${occupiedRooms}/${totalRooms} rooms` },
           { label: 'Collection Rate', value: `${collectionRate}%`, icon: '📊', color: 'cyan', change: `${paidPayments.length} of ${payments.length}` },
           { label: 'Pending Dues', value: formatCurrency(pendingAmount), icon: '⏳', color: 'orange', change: `${pendingPayments.length} payments` },
@@ -176,7 +216,7 @@ export default function Reports() {
               ['Pending Maintenance', maintenanceStats.pending, '🔧'],
               ['Resolved Maintenance', maintenanceStats.resolved, '✅'],
               ['Average Rent', formatCurrency(rooms.length > 0 ? Math.round(rooms.reduce((s, r) => s + r.rent, 0) / rooms.length) : 0), '💵'],
-              ['Total Deposit Held', formatCurrency(rooms.filter(r => r.status === 'occupied').reduce((s, r) => s + r.deposit, 0)), '🏦'],
+              ['Total Deposit Held', formatCurrency(agreements.filter(a => a.status === 'active' && a.depositPaid).reduce((s, a) => s + (Number(a.deposit) || 0), 0)), '🏦'],
             ].map(([label, value, icon], i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-sm)', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>

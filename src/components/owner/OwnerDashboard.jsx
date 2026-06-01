@@ -99,14 +99,41 @@ export default function OwnerDashboard() {
     );
   };
 
-  // Revenue bar chart
-  const monthlyData = [
-    { month: 'Jan', revenue: 0 },
-    { month: 'Feb', revenue: 0 },
-    { month: 'Mar', revenue: 0 },
-    { month: 'Apr', revenue: 0 },
-    { month: 'May', revenue: monthlyRevenue },
-  ];
+  // Revenue bar chart — use actual paid payment data grouped by month
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const currentMonthIndex = now.getMonth(); // 0-based
+  const paidPayments = payments.filter(p => p.status === 'paid');
+  
+  // Build last 5 months of revenue from actual payment data
+  const monthlyData = [];
+  for (let i = 4; i >= 0; i--) {
+    const targetDate = new Date(now.getFullYear(), currentMonthIndex - i, 1);
+    const mName = monthNames[targetDate.getMonth()];
+    const mYear = targetDate.getFullYear();
+    const monthPayments = paidPayments.filter(p => {
+      // Match by payment month field or by paidDate
+      if (p.month && p.year) {
+        const payMonthIdx = monthNames.indexOf(p.month.slice(0, 3));
+        // Also try full month names
+        const fullMonths = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const payMonthIdxFull = fullMonths.indexOf(p.month);
+        const idx = payMonthIdx >= 0 ? payMonthIdx : payMonthIdxFull;
+        return idx === targetDate.getMonth() && Number(p.year) === mYear;
+      }
+      if (p.paidDate) {
+        const pd = new Date(p.paidDate);
+        return pd.getMonth() === targetDate.getMonth() && pd.getFullYear() === mYear;
+      }
+      return false;
+    });
+    monthlyData.push({ month: mName, revenue: monthPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) });
+  }
+  
+  // Calculate month-over-month trend
+  const currentMonthRevenue = monthlyData[monthlyData.length - 1]?.revenue || 0;
+  const prevMonthRevenue = monthlyData[monthlyData.length - 2]?.revenue || 0;
+  const revenueTrend = prevMonthRevenue > 0 ? Math.round(((currentMonthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100) : 0;
   const maxRevenue = Math.max(...monthlyData.map(d => d.revenue), 1000);
 
   // Activity feed (Dynamic)
@@ -174,7 +201,7 @@ export default function OwnerDashboard() {
           <div className="stat-info">
             <h4>Monthly Revenue</h4>
             <div className="stat-value">{formatCurrency(monthlyRevenue)}</div>
-            <div className="stat-change up">↑ 8% from last month</div>
+            <div className={`stat-change ${revenueTrend >= 0 ? 'up' : 'down'}`}>{revenueTrend >= 0 ? '↑' : '↓'} {Math.abs(revenueTrend)}% from last month</div>
           </div>
           <div className="stat-icon green">💰</div>
         </div>
@@ -345,7 +372,22 @@ export default function OwnerDashboard() {
               }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, color: sc.text }}>{room.number}</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>{room.type}</div>
-                {roomGuests.length > 0 && <div style={{ fontSize: '0.7rem', marginTop: 4, color: 'var(--text-secondary)' }} className="truncate">{roomGuests.map(g => g.name?.split(' ')[0]).join(', ')}</div>}
+                
+                {/* Miniature Bed Occupancy Icons */}
+                <div style={{ display: 'flex', gap: '3px', justifyContent: 'center', marginTop: '6px' }}>
+                  {Array.from({ length: capacity }).map((_, idx) => {
+                    const occupant = roomGuests[idx];
+                    const isOccupied = !!occupant;
+                    const bedColor = isOccupied ? '#ef4444' : '#10b981';
+                    return (
+                      <svg key={idx} width="11" height="11" viewBox="0 0 24 24" fill={bedColor} title={occupant ? occupant.name : 'Vacant'}>
+                        <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z" />
+                      </svg>
+                    );
+                  })}
+                </div>
+                
+                {roomGuests.length > 0 && <div style={{ fontSize: '0.65rem', marginTop: 4, color: 'var(--text-secondary)' }} className="truncate">{roomGuests.map(g => g.name?.split(' ')[0]).join(', ')}</div>}
               </div>
             );
           })}

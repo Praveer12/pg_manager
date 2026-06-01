@@ -25,9 +25,21 @@ export default function MaintenanceBoard() {
   ];
 
   const moveRequest = async (reqId, newStatus) => {
+    const req = requests.find(r => r.id === reqId);
+    const room = rooms.find(rm => rm.id === req?.roomId);
+    
     const updates = { status: newStatus };
     if (newStatus === 'resolved') updates.resolvedDate = new Date().toISOString();
     await storage.update(STORAGE_KEYS.MAINTENANCE, reqId, updates);
+    
+    const statusLabels = { new: 'New Request', in_progress: 'In Progress', resolved: 'Resolved' };
+    await storage.logActivity(
+      '🔧',
+      'maintenance',
+      `Maintenance request **"${req?.title || ''}"** for **Room ${room?.number || ''}** set to **${statusLabels[newStatus] || newStatus}**`,
+      `Category: ${req?.category || ''} | Priority: ${req?.priority || ''}`
+    );
+    
     await refreshData();
   };
 

@@ -90,13 +90,25 @@ const DEMO_AGREEMENTS = [
 function generatePaymentHistory() {
   const payments = [];
   const guests = DEMO_GUESTS;
-  const months = [
-    { month: 'January', year: 2025, date: '2025-01-05' },
-    { month: 'February', year: 2025, date: '2025-02-05' },
-    { month: 'March', year: 2025, date: '2025-03-05' },
-    { month: 'April', year: 2025, date: '2025-04-05' },
-    { month: 'May', year: 2025, date: '2025-05-05' },
+  
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthIndex = now.getMonth();
+  
+  const months = [];
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ];
+  
+  for (let i = 4; i >= 0; i--) {
+    const targetDate = new Date(now.getFullYear(), currentMonthIndex - i, 1);
+    months.push({
+      month: monthNames[targetDate.getMonth()],
+      year: targetDate.getFullYear(),
+      date: `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-05`
+    });
+  }
 
   const methods = ['UPI', 'Cash', 'Bank Transfer', 'UPI'];
   
@@ -104,12 +116,15 @@ function generatePaymentHistory() {
     const agreement = DEMO_AGREEMENTS.find(a => a.guestId === guest.id);
     if (!agreement) return;
     
-    const startMonth = new Date(guest.joinDate).getMonth();
+    const guestJoinDate = new Date(guest.joinDate);
     
     months.forEach((m, mi) => {
-      if (mi < startMonth) return;
+      const monthIndex = monthNames.indexOf(m.month);
+      const paymentDate = new Date(m.year, monthIndex, 1);
+      const joinYearMonth = new Date(guestJoinDate.getFullYear(), guestJoinDate.getMonth(), 1);
+      if (paymentDate < joinYearMonth) return;
       
-      const isPaid = mi < 4; // May is pending for demo
+      const isPaid = mi < 4; // The first 4 months of rolling are paid, the 5th (latest) is pending
       payments.push({
         id: `pay_${guest.id}_${mi}`,
         guestId: guest.id,
@@ -118,8 +133,8 @@ function generatePaymentHistory() {
         amount: agreement.rent,
         month: m.month,
         year: m.year,
-        dueDate: `${m.year}-${String(mi + 1).padStart(2, '0')}-05`,
-        paidDate: isPaid ? `${m.year}-${String(mi + 1).padStart(2, '0')}-0${3 + Math.floor(Math.random() * 3)}` : null,
+        dueDate: `${m.year}-${String(monthIndex + 1).padStart(2, '0')}-05`,
+        paidDate: isPaid ? `${m.year}-${String(monthIndex + 1).padStart(2, '0')}-0${3 + Math.floor(Math.random() * 3)}` : null,
         method: isPaid ? methods[Math.floor(Math.random() * methods.length)] : null,
         status: isPaid ? 'paid' : (mi === 4 ? 'pending' : 'overdue'),
         receiptNo: isPaid ? `RCP-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}` : null,
@@ -153,7 +168,79 @@ const DEMO_BOOKING_REQUESTS = [
   { id: 'bk_002', userId: 'tenant_003', name: 'Meera Nair', email: 'meera@email.com', phone: '9876543221', roomId: 'room_007', propertyId: 'prop_001', moveInDate: '2025-06-15', stayType: 'Monthly', message: 'Student at nearby college. Looking for affordable double sharing.', status: 'pending', createdAt: '2025-05-25T11:00:00Z' },
 ];
 
+const DEMO_ACTIVITIES = [
+  {
+    id: 'act_001',
+    icon: '💰',
+    type: 'payment',
+    text: 'Payment of **₹8,500** recorded for **Priya Sharma** (Room 101)',
+    details: 'Month: May | Method: UPI | Receipt: RCP-582049',
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(), // 2 hours ago
+    updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+  },
+  {
+    id: 'act_002',
+    icon: '👥',
+    type: 'guest_checkin',
+    text: 'New guest **Neha Gupta** checked in to **Room 302** (Single)',
+    details: 'Move-in Date: 2026-05-01 | Deposit Collected: ₹19,000',
+    createdAt: new Date(Date.now() - 3600000 * 6).toISOString(), // 6 hours ago
+    updatedAt: new Date(Date.now() - 3600000 * 6).toISOString(),
+  },
+  {
+    id: 'act_003',
+    icon: '🔧',
+    type: 'maintenance',
+    text: 'Maintenance request **"Bathroom tap leaking"** for **Room 101** set to *In Progress*',
+    details: 'Assigned to: Ramu (Plumber) | Priority: High',
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(), // 1 day ago
+    updatedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+  {
+    id: 'act_004',
+    icon: '📋',
+    type: 'notice',
+    text: 'Notice posted: **"Water Supply Interruption"**',
+    details: 'Scheduled for May 28th, 10 AM - 4 PM. Pinned: Yes.',
+    createdAt: new Date(Date.now() - 3600000 * 36).toISOString(), // 1.5 days ago
+    updatedAt: new Date(Date.now() - 3600000 * 36).toISOString(),
+  },
+  {
+    id: 'act_005',
+    icon: '🚪',
+    type: 'room_add',
+    text: 'New Room **304** (Double Sharing) added to Sunrise PG Residency',
+    details: 'Monthly Rent: ₹6,000 | Deposit: ₹12,000',
+    createdAt: new Date(Date.now() - 3600000 * 72).toISOString(), // 3 days ago
+    updatedAt: new Date(Date.now() - 3600000 * 72).toISOString(),
+  },
+  {
+    id: 'act_006',
+    icon: '🚪',
+    type: 'guest_checkout',
+    text: 'Guest **Kavita Joshi** checked out from **Room 204**',
+    details: 'Checkout Date: 2026-05-15 | Room status set to vacant',
+    createdAt: new Date(Date.now() - 3600000 * 120).toISOString(), // 5 days ago
+    updatedAt: new Date(Date.now() - 3600000 * 120).toISOString(),
+  }
+];
+
 export function initializeMockData() {
+  // If data exists, let's verify if payments need a migration (e.g. from year 2025 to 2026)
+  const existingPayments = localStorage.getItem(STORAGE_KEYS.PAYMENTS);
+  if (existingPayments) {
+    try {
+      const parsed = JSON.parse(existingPayments);
+      const hasOldPayments = parsed.some(p => Number(p.year) === 2025);
+      const currentYear = new Date().getFullYear();
+      if (hasOldPayments && currentYear > 2025) {
+        localStorage.removeItem(STORAGE_KEYS.PAYMENTS);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   // Only initialize if data doesn't exist
   if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify([DEMO_OWNER, DEMO_TENANT]));
@@ -181,6 +268,9 @@ export function initializeMockData() {
   }
   if (!localStorage.getItem(STORAGE_KEYS.BOOKING_REQUESTS)) {
     localStorage.setItem(STORAGE_KEYS.BOOKING_REQUESTS, JSON.stringify(DEMO_BOOKING_REQUESTS));
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.ACTIVITIES)) {
+    localStorage.setItem(STORAGE_KEYS.ACTIVITIES, JSON.stringify(DEMO_ACTIVITIES));
   }
 }
 
