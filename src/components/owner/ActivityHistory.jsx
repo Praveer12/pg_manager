@@ -137,7 +137,7 @@ export default function ActivityHistory() {
                   alignItems: 'flex-start',
                   position: 'relative',
                   border: '1px solid var(--border-color)',
-                  boxShadow: `0 4px 12px rgba(0, 0, 0, 0.15), ${cs.glow !== 'none' ? `0 0 15px ${cs.glow}` : '0 0 0 transparent'}`,
+                  boxShadow: `0 4px 12px rgba(0, 0, 0, 0.05), ${cs.glow !== 'none' ? `0 0 15px ${cs.glow}` : '0 0 0 transparent'}`,
                   transition: 'all 0.3s ease',
                   animation: 'fadeIn 0.4s ease',
                 }}>
@@ -180,7 +180,7 @@ export default function ActivityHistory() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
-                        background: 'rgba(255, 255, 255, 0.03)',
+                        background: 'var(--bg-input)',
                         padding: '4px 8px',
                         borderRadius: 'var(--radius-sm)',
                         width: 'fit-content',

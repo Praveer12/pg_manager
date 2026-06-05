@@ -219,8 +219,8 @@ export default function RoomManager() {
                       {Array.from({ length: capacity }).map((_, idx) => {
                         const occupant = roomGuests[idx];
                         const isOccupied = !!occupant;
-                        const bedColor = isOccupied ? '#ef4444' : '#10b981'; // vibrant red and green
-                        const bgLight = isOccupied ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+                        const bedColor = isOccupied ? 'var(--danger)' : 'var(--success)';
+                        const bgLight = isOccupied ? 'var(--danger-bg)' : 'var(--success-bg)';
                         return (
                           <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', flex: 1, minWidth: 0 }}>
                             <div style={{
@@ -232,7 +232,7 @@ export default function RoomManager() {
                               borderRadius: 'var(--radius-md)',
                               background: bgLight,
                               marginBottom: '6px',
-                              border: `1px solid ${isOccupied ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
+                              border: `1px solid ${isOccupied ? 'var(--danger-bg)' : 'var(--success-bg)'}`,
                               transition: 'transform 0.2s',
                             }}>
                               <svg width="22" height="22" viewBox="0 0 24 24" fill={bedColor} style={{ display: 'block' }}>
@@ -322,7 +322,7 @@ export default function RoomManager() {
                           {Array.from({ length: capacity }).map((_, idx) => {
                             const occupant = roomGuests[idx];
                             const isOccupied = !!occupant;
-                            const bedColor = isOccupied ? '#ef4444' : '#10b981';
+                            const bedColor = isOccupied ? 'var(--danger)' : 'var(--success)';
                             return (
                               <svg key={idx} width="16" height="16" viewBox="0 0 24 24" fill={bedColor} title={occupant ? occupant.name : 'Vacant'}>
                                 <path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z" />

@@ -155,7 +155,24 @@ export default function GuestManager() {
     
     const room = rooms.find(r => r.id === guest.roomId);
     await storage.update(STORAGE_KEYS.GUESTS, guest.id, { status: 'checked_out', checkoutDate: new Date().toISOString() });
-    await storage.update(STORAGE_KEYS.ROOMS, guest.roomId, { status: 'vacant' });
+    
+    // Check remaining active guests in this room to determine correct room status
+    const remainingGuests = guests.filter(g => g.roomId === guest.roomId && g.status === 'active' && g.id !== guest.id);
+    const capacity = room?.type === 'Single' ? 1 : room?.type === 'Double' ? 2 : room?.type === 'Triple' ? 3 : 1;
+    let newRoomStatus = 'vacant';
+    if (remainingGuests.length >= capacity) {
+      newRoomStatus = 'occupied';
+    } else if (remainingGuests.length > 0) {
+      // Partially occupied — keep status as occupied (or you could mark it vacant so it shows as available)
+      newRoomStatus = 'vacant';
+    }
+    await storage.update(STORAGE_KEYS.ROOMS, guest.roomId, { status: newRoomStatus });
+    
+    // Mark the guest's active agreements as expired
+    const guestAgreements = agreements.filter(a => a.guestId === guest.id && (a.status === 'active' || a.status === 'expiring'));
+    for (const agr of guestAgreements) {
+      await storage.update(STORAGE_KEYS.AGREEMENTS, agr.id, { status: 'expired' });
+    }
     
     await storage.logActivity(
       '🚪',

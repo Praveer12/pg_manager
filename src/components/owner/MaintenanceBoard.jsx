@@ -32,6 +32,24 @@ export default function MaintenanceBoard() {
     if (newStatus === 'resolved') updates.resolvedDate = new Date().toISOString();
     await storage.update(STORAGE_KEYS.MAINTENANCE, reqId, updates);
     
+    // Check if the room should still be in maintenance
+    if (room) {
+      if (newStatus === 'resolved') {
+        // Find if there are other active maintenance requests for this room
+        const activeRequests = requests.filter(r => r.roomId === room.id && r.id !== reqId && r.status !== 'resolved');
+        if (activeRequests.length === 0) {
+          // If no other active requests, revert room to occupied or vacant
+          const roomGuests = guests.filter(g => g.roomId === room.id && g.status === 'active');
+          const capacity = room.type === 'Single' ? 1 : room.type === 'Double' ? 2 : room.type === 'Triple' ? 3 : 1;
+          const expectedStatus = roomGuests.length >= capacity ? 'occupied' : 'vacant';
+          await storage.update(STORAGE_KEYS.ROOMS, room.id, { status: expectedStatus });
+        }
+      } else {
+        // If moved to new or in_progress, ensure room is in maintenance
+        await storage.update(STORAGE_KEYS.ROOMS, room.id, { status: 'maintenance' });
+      }
+    }
+    
     const statusLabels = { new: 'New Request', in_progress: 'In Progress', resolved: 'Resolved' };
     await storage.logActivity(
       '🔧',

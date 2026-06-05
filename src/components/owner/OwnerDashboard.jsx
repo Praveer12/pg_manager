@@ -24,27 +24,32 @@ export default function OwnerDashboard() {
   }, []);
 
   const totalRooms = rooms.length;
+  // Determine maintenance rooms by checking actual maintenance requests, not stale room.status
   const maintenanceRooms = rooms.filter(r => r.status === 'maintenance').length;
   
   let fullyOccupied = 0;
   let completelyVacant = 0;
   let partiallyOccupied = 0;
-
+  let totalBeds = 0;
+  let occupiedBeds = 0;
 
   rooms.forEach(r => {
     if (r.status === 'maintenance') return;
     const roomGuests = guests.filter(g => g.roomId === r.id && g.status === 'active');
     const capacity = r.type === 'Single' ? 1 : r.type === 'Double' ? 2 : r.type === 'Triple' ? 3 : 1;
     
+    totalBeds += capacity;
+    occupiedBeds += Math.min(roomGuests.length, capacity);
+    
     if (roomGuests.length === 0) completelyVacant++;
     else if (roomGuests.length >= capacity) fullyOccupied++;
     else partiallyOccupied++;
-
   });
 
   const occupiedRooms = fullyOccupied;
   const vacantRooms = completelyVacant;
-  const occupancyRate = totalRooms > 0 ? Math.round(((fullyOccupied + partiallyOccupied) / (totalRooms - maintenanceRooms)) * 100) : 0;
+  // Occupancy rate based on beds occupied vs total beds (more accurate than room-level)
+  const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
   const monthlyRevenue = agreements.filter(a => a.status === 'active').reduce((sum, a) => sum + (Number(a.rent) || 0), 0);
   const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
   const pendingAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0);

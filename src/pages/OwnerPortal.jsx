@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useNavigate, Navigate, useLocation } from 'react-router-dom';
-import storage, { STORAGE_KEYS } from '../utils/storage';
+import storage, { STORAGE_KEYS, cleanupInconsistentData } from '../utils/storage';
 import { useAuth } from '../contexts/AuthContext';
 import OwnerDashboard from '../components/owner/OwnerDashboard';
 import RoomManager from '../components/owner/RoomManager';
@@ -32,7 +32,7 @@ const Icons = {
       <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
     </svg>
   ),
-  guests: (active) => (
+  guests: () => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
       <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -43,7 +43,7 @@ const Icons = {
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
     </svg>
   ),
-  more: (active) => (
+  more: () => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/>
       <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
@@ -115,6 +115,42 @@ export default function OwnerPortal() {
   const [property, setProperty] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [dismissedNotifications, setDismissedNotifications] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('pgm_dismissed_notifications') || '[]'); } catch { return []; }
+  });
+
+  // Theme state: default to light
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('pgm_theme') || 'light';
+  });
+
+  // Apply theme on mount and changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('pgm_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const dismissNotification = (notificationId) => {
+    const updated = [...dismissedNotifications, notificationId];
+    setDismissedNotifications(updated);
+    localStorage.setItem('pgm_dismissed_notifications', JSON.stringify(updated));
+  };
+
+  const dismissAllNotifications = () => {
+    const allIds = notifications.map(n => n.id);
+    const updated = [...new Set([...dismissedNotifications, ...allIds])];
+    setDismissedNotifications(updated);
+    localStorage.setItem('pgm_dismissed_notifications', JSON.stringify(updated));
+  };
+
+  useEffect(() => {
+    // Aggressively clean up any data inconsistencies whenever the owner navigates around
+    cleanupInconsistentData();
+  }, [location.pathname]);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -125,16 +161,31 @@ export default function OwnerPortal() {
       // 1. Pending Booking Requests
       try {
         const bookings = await storage.getAll(STORAGE_KEYS.BOOKING_REQUESTS);
+        const rooms = await storage.getAll(STORAGE_KEYS.ROOMS);
         const pendingBookings = bookings.filter(b => b.status === 'pending');
         pendingBookings.forEach(b => {
+          let parsed = { text: b.message, userContext: {} };
+          try {
+            parsed = JSON.parse(b.message);
+          } catch(e) {
+            // legacy plain text message
+          }
+          
+          const isRealloc = parsed.userContext?.type === 'reallocation';
+          const userName = parsed.userContext?.name || 'A tenant';
+          const targetRoomObj = rooms.find(r => r.id === b.roomId);
+          const targetRoom = isRealloc ? `Room ${targetRoomObj?.number || 'Unknown'}` : `Room ${targetRoomObj?.number || 'Unknown'}`;
+          
           newNotifications.push({
             id: `booking_${b.id}`,
             type: 'booking',
-            title: '📋 New Booking Request',
-            message: `**${b.name}** wants to book a room. Move-in: ${b.moveInDate || 'Not specified'}.`,
+            title: isRealloc ? 'Room Reallocation Request' : 'New Booking Request',
+            message: isRealloc 
+              ? `**${userName}** requested to move to ${targetRoom}.`
+              : `**${userName}** wants to book ${targetRoom}. Move-in: ${b.moveInDate || 'Not specified'}.`,
             time: b.createdAt,
             path: '/owner/guests',
-            icon: '📋',
+            icon: isRealloc ? '🔄' : '📋',
           });
         });
       } catch (e) {
@@ -303,6 +354,15 @@ export default function OwnerPortal() {
               <span className="search-icon">{Icons.search()}</span>
               <input type="text" placeholder="Search rooms, guests..." />
             </div>
+            {/* Theme Toggle */}
+            <button
+              className="notification-btn theme-toggle-btn"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
             <div className="relative" style={{ display: 'flex', alignItems: 'center' }}>
               <button 
                 className="notification-btn" 
@@ -310,7 +370,7 @@ export default function OwnerPortal() {
                 style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 {Icons.bell()}
-                {notifications.length > 0 && (
+                {notifications.filter(n => !dismissedNotifications.includes(n.id)).length > 0 && (
                   <span style={{
                     position: 'absolute',
                     top: '-2px',
@@ -328,7 +388,7 @@ export default function OwnerPortal() {
                     border: '2px solid var(--bg-primary)',
                     padding: '0 3px',
                   }}>
-                    {notifications.length}
+                    {notifications.filter(n => !dismissedNotifications.includes(n.id)).length}
                   </span>
                 )}
               </button>
@@ -339,7 +399,7 @@ export default function OwnerPortal() {
                   top: '100%', 
                   right: 0, 
                   marginTop: '8px', 
-                  width: '320px', 
+                  width: '360px', 
                   padding: 0,
                   zIndex: 1000,
                   boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
@@ -359,9 +419,20 @@ export default function OwnerPortal() {
                     borderTopRightRadius: 'var(--radius-md)',
                   }}>
                     <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>Notifications</h4>
-                    {notifications.length > 0 && (
-                      <span className="badge badge-purple" style={{ fontSize: '0.7rem' }}>{notifications.length} New</span>
-                    )}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {notifications.filter(n => !dismissedNotifications.includes(n.id)).length > 0 && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ fontSize: '0.7rem', padding: '3px 8px', color: 'var(--accent-primary-light)' }}
+                          onClick={(e) => { e.stopPropagation(); dismissAllNotifications(); }}
+                        >
+                          ✓ Mark All Read
+                        </button>
+                      )}
+                      <span className="badge badge-purple" style={{ fontSize: '0.7rem' }}>
+                        {notifications.filter(n => !dismissedNotifications.includes(n.id)).length} New
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="notifications-list scrollbar-custom" style={{ 
@@ -371,52 +442,76 @@ export default function OwnerPortal() {
                     borderBottomLeftRadius: 'var(--radius-md)',
                     borderBottomRightRadius: 'var(--radius-md)',
                   }}>
-                    {notifications.length > 0 ? (
-                      notifications.map((n) => (
-                        <div 
-                          key={n.id} 
-                          className="notification-item" 
-                          onClick={() => { 
-                            setShowNotifications(false); 
-                            navigate(n.path); 
-                          }}
-                          style={{ 
-                            padding: 'var(--space-md)', 
-                            borderBottom: '1px solid var(--border-color)', 
-                            cursor: 'pointer',
-                            display: 'flex',
-                            gap: 'var(--space-md)',
-                            transition: 'background var(--transition-fast)',
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                        >
-                          <div className="notification-icon" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {n.icon}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{n.title}</div>
+                    {(() => {
+                      const visibleNotifications = notifications.filter(n => !dismissedNotifications.includes(n.id));
+                      return visibleNotifications.length > 0 ? (
+                        visibleNotifications.map((n) => (
+                          <div 
+                            key={n.id} 
+                            className="notification-item" 
+                            style={{ 
+                              padding: 'var(--space-md)', 
+                              borderBottom: '1px solid var(--border-color)', 
+                              cursor: 'pointer',
+                              display: 'flex',
+                              gap: 'var(--space-md)',
+                              transition: 'background var(--transition-fast)',
+                              alignItems: 'flex-start',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          >
                             <div 
-                              style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: '1.4' }}
-                              dangerouslySetInnerHTML={{ 
-                                __html: n.message
-                                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                  .replace(/\*(.*?)\*/g, '<em>$1</em>') 
-                              }}
-                            />
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                              {new Date(n.time).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at {new Date(n.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              className="notification-icon" 
+                              style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}
+                            >
+                              {n.icon}
                             </div>
+                            <div 
+                              style={{ flex: 1, minWidth: 0, textAlign: 'left' }}
+                              onClick={() => { 
+                                dismissNotification(n.id);
+                                setShowNotifications(false); 
+                                navigate(n.path); 
+                              }}
+                            >
+                              <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{n.title}</div>
+                              <div 
+                                style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', lineHeight: '1.4' }}
+                                dangerouslySetInnerHTML={{ 
+                                  __html: n.message
+                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                    .replace(/\*(.*?)\*/g, '<em>$1</em>') 
+                                }}
+                              />
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                {new Date(n.time).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at {new Date(n.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              title="Mark as read"
+                              onClick={(e) => { e.stopPropagation(); dismissNotification(n.id); }}
+                              style={{ 
+                                flexShrink: 0, 
+                                padding: '4px 8px', 
+                                fontSize: '0.7rem', 
+                                color: 'var(--text-muted)',
+                                borderRadius: 'var(--radius-sm)',
+                              }}
+                            >
+                              ✓ Read
+                            </button>
                           </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: 'var(--space-xl)', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <div style={{ fontSize: '2rem', marginBottom: 'var(--space-sm)' }}>🎉</div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>All caught up!</div>
+                          <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>No new alerts or pending tasks.</div>
                         </div>
-                      ))
-                    ) : (
-                      <div style={{ padding: 'var(--space-xl)', textAlign: 'center', color: 'var(--text-muted)' }}>
-                        <div style={{ fontSize: '2rem', marginBottom: 'var(--space-sm)' }}>🎉</div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>All caught up!</div>
-                        <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>No new alerts or pending tasks.</div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               )}

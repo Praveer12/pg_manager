@@ -163,19 +163,21 @@ export default function AgreementManager() {
           const guest = guests.find(g => g.id === agr.guestId);
           const room = rooms.find(r => r.id === agr.roomId);
           const daysLeft = getDaysRemaining(agr.endDate);
-          const isExpiring = daysLeft !== null && daysLeft <= 30 && daysLeft > 0;
-          const isExpired = daysLeft !== null && daysLeft <= 0;
+          const isExpired = agr.status === 'expired' || (daysLeft !== null && daysLeft <= 0);
+          const isExpiring = !isExpired && (agr.status === 'expiring' || (daysLeft !== null && daysLeft <= 30 && daysLeft > 0));
+
+          const isGuestCheckedOut = guest?.status === 'checked_out';
 
           return (
-            <div key={agr.id} className="glass-card" style={{ padding: 'var(--space-lg)' }}>
+            <div key={agr.id} className="glass-card" style={{ padding: 'var(--space-lg)', opacity: isGuestCheckedOut ? 0.65 : 1, filter: isGuestCheckedOut ? 'grayscale(0.5)' : 'none' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-md)' }}>
                 <div>
-                  <h4 style={{ marginBottom: 2 }}>{guest?.name || 'Unknown'}</h4>
+                  <h4 style={{ marginBottom: 2, textDecoration: isGuestCheckedOut ? 'line-through' : 'none' }}>{guest?.name || 'Unknown'}</h4>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Room {room?.number} • {agr.type}</div>
                 </div>
-                <span className={`status-badge ${isExpired ? 'status-badge-danger' : isExpiring ? 'status-badge-warning' : 'status-badge-success'}`}>
-                  <span className={`status-dot-indicator ${isExpired ? 'danger' : isExpiring ? 'warning' : 'success'}`}></span>
-                  {isExpired ? 'Expired' : isExpiring ? `${daysLeft}d left` : 'Active'}
+                <span className={`status-badge ${isGuestCheckedOut ? 'status-badge-danger' : isExpired ? 'status-badge-danger' : isExpiring ? 'status-badge-warning' : 'status-badge-success'}`}>
+                  <span className={`status-dot-indicator ${isGuestCheckedOut ? 'danger' : isExpired ? 'danger' : isExpiring ? 'warning' : 'success'}`}></span>
+                  {isGuestCheckedOut ? 'Checked Out' : isExpired ? 'Expired' : isExpiring ? `${daysLeft}d left` : 'Active'}
                 </span>
               </div>
 
@@ -214,9 +216,14 @@ export default function AgreementManager() {
                 <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => viewAgreementDoc(agr)}>
                   📄 View Agreement
                 </button>
-                {(isExpiring || isExpired) && (
+                {(isExpiring || isExpired) && !isGuestCheckedOut && (
                   <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => renewAgreement(agr)}>
                     🔄 Renew
+                  </button>
+                )}
+                {isGuestCheckedOut && (
+                  <button className="btn btn-primary btn-sm" style={{ flex: 1, opacity: 0.5, cursor: 'not-allowed' }} disabled onClick={() => {}}>
+                    🔒 Checked Out
                   </button>
                 )}
               </div>

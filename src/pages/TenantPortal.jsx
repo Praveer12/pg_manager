@@ -81,6 +81,21 @@ export default function TenantPortal() {
   const [noticesBadge, setNoticesBadge] = useState(0);
   const [property, setProperty] = useState(null);
 
+  // Theme state: default to light
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('pgm_theme') || 'light';
+  });
+
+  // Apply theme on mount and changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('pgm_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
   useEffect(() => {
     const fetchBadges = async () => {
       const notices = await storage.getAll(STORAGE_KEYS.NOTICES);
@@ -177,6 +192,15 @@ export default function TenantPortal() {
             </span>
           </div>
           <div className="navbar-right">
+            {/* Theme Toggle */}
+            <button
+              className="notification-btn theme-toggle-btn"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
             <button className="notification-btn" onClick={() => alert('No new notifications')}>
               {Icons.bell()}
             </button>

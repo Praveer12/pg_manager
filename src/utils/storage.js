@@ -40,6 +40,10 @@ export const storage = {
 
   // Get all items from a Supabase table, with localStorage fallback
   async getAll(key) {
+    if (!window.__pgmHasRunCleanup) {
+      cleanupInconsistentData();
+      window.__pgmHasRunCleanup = true;
+    }
     if (supabase) {
       try {
         const { data, error } = await supabase.from(key).select('*');
@@ -184,4 +188,53 @@ export function generateId() {
 }
 
 export { STORAGE_KEYS };
+
+// Force cleanup script to aggressively fix inconsistent state across the entire app
+export const cleanupInconsistentData = () => {
+  try {
+    const guests = JSON.parse(localStorage.getItem('pgm_guests') || '[]');
+    const rooms = JSON.parse(localStorage.getItem('pgm_rooms') || '[]');
+    const agreements = JSON.parse(localStorage.getItem('pgm_agreements') || '[]');
+    const maintenance = JSON.parse(localStorage.getItem('pgm_maintenance') || '[]');
+    let updated = false;
+
+    // Fix agreements for checked out guests
+    const checkedOutGuestsIds = guests.filter(g => g.status === 'checked_out').map(g => g.id);
+    const cleanedAgreements = agreements.map(agr => {
+      if (checkedOutGuestsIds.includes(agr.guestId) && (agr.status === 'active' || agr.status === 'expiring')) {
+        updated = true;
+        return { ...agr, status: 'expired' };
+      }
+      return agr;
+    });
+
+    // Fix room statuses based on actual active guests and actual maintenance requests
+    const activeGuests = guests.filter(g => g.status === 'active');
+    const activeMaintenance = maintenance.filter(m => m.status !== 'resolved');
+    
+    const cleanedRooms = rooms.map(room => {
+      const hasMaintenance = activeMaintenance.some(m => m.roomId === room.id);
+      const roomGuests = activeGuests.filter(g => g.roomId === room.id);
+      const capacity = room.type === 'Single' ? 1 : room.type === 'Double' ? 2 : room.type === 'Triple' ? 3 : 1;
+      
+      let expectedStatus = roomGuests.length >= capacity ? 'occupied' : 'vacant';
+      if (hasMaintenance) expectedStatus = 'maintenance';
+
+      if (room.status !== expectedStatus) {
+        updated = true;
+        return { ...room, status: expectedStatus };
+      }
+      return room;
+    });
+
+    if (updated) {
+      localStorage.setItem('pgm_agreements', JSON.stringify(cleanedAgreements));
+      localStorage.setItem('pgm_rooms', JSON.stringify(cleanedRooms));
+      console.log('PGM: Cleaned up inconsistent local storage data (from aggressive cleanup)');
+    }
+  } catch (e) {
+    console.error('PGM: Error during aggressive data cleanup', e);
+  }
+};
+
 export default storage;

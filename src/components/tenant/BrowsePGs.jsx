@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 import storage, { STORAGE_KEYS } from '../../utils/storage';
 import { formatCurrency } from '../../utils/formatters';
 import { AMENITY_ICONS } from '../../data/mockData';
@@ -6,6 +7,7 @@ import { AMENITY_ICONS } from '../../data/mockData';
 export default function BrowsePGs() {
   const [rooms, setRooms] = useState([]);
   const [properties, setProperties] = useState([]);
+  const [guests, setGuests] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [priceRange, setPriceRange] = useState(15000);
@@ -19,9 +21,14 @@ export default function BrowsePGs() {
     const fetchData = async () => {
       setRooms(await storage.getAll(STORAGE_KEYS.ROOMS));
       setProperties(await storage.getAll(STORAGE_KEYS.PROPERTIES));
+      setGuests(await storage.getAll(STORAGE_KEYS.GUESTS));
     };
     fetchData();
   }, []);
+
+  const { user } = useAuth();
+  const currentGuestRecord = guests.find(g => g.email === user?.email && g.status === 'active');
+  const isReallocation = !!currentGuestRecord;
 
   const property = properties[0];
 
@@ -39,9 +46,22 @@ export default function BrowsePGs() {
   };
 
   const handleBooking = async () => {
+    const messagePayload = {
+      text: bookingMessage,
+      userContext: {
+        userId: user?.id,
+        name: user?.name || user?.email,
+        email: user?.email,
+        phone: user?.phone || currentGuestRecord?.phone || '',
+        type: isReallocation ? 'reallocation' : 'new_booking',
+        currentRoomId: currentGuestRecord?.roomId || null
+      }
+    };
+
     await storage.add(STORAGE_KEYS.BOOKING_REQUESTS, {
       roomId: selectedRoom.id,
-      message: bookingMessage, status: 'pending',
+      message: JSON.stringify(messagePayload), 
+      status: 'pending',
       moveInDate: new Date().toISOString().split('T')[0],
       stayType: 'Monthly',
     });
@@ -146,7 +166,7 @@ export default function BrowsePGs() {
             </div>
             <div className="room-card-footer">
               <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Deposit: {formatCurrency(room.deposit)}</span>
-              <button className="btn btn-primary btn-sm">Book Now</button>
+              <button className="btn btn-primary btn-sm">{isReallocation ? 'Request Reallocation' : 'Book Now'}</button>
             </div>
           </div>
         ))}
@@ -173,7 +193,7 @@ export default function BrowsePGs() {
             ) : (
               <>
                 <div className="modal-header">
-                  <h3>Book Room {selectedRoom.number}</h3>
+                  <h3>{isReallocation ? `Request Reallocation to Room ${selectedRoom.number}` : `Book Room ${selectedRoom.number}`}</h3>
                   <button className="modal-close" onClick={() => setShowBookingModal(false)}>✕</button>
                 </div>
                 <div className="modal-body">
@@ -198,7 +218,9 @@ export default function BrowsePGs() {
                 </div>
                 <div className="modal-footer">
                   <button className="btn btn-secondary" onClick={() => setShowBookingModal(false)}>Cancel</button>
-                  <button className="btn btn-primary" onClick={handleBooking}>Submit Booking Request</button>
+                  <button className="btn btn-primary" onClick={handleBooking}>
+                    {isReallocation ? 'Submit Reallocation Request' : 'Submit Booking Request'}
+                  </button>
                 </div>
               </>
             )}
